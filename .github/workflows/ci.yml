@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Byte-compile the client and the examples
+        run: python -m compileall -q python examples
+      - name: Import the client
+        run: python -c "import sys; sys.path.insert(0, 'python'); import x64dbg_bridge; print(x64dbg_bridge.Debugger)"
+
+  plugin:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, x86]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the x64dbg plugin SDK (latest official release)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo x64dbg/x64dbg --pattern x64dbg-pluginsdk.zip --dir sdk
+          Expand-Archive sdk\x64dbg-pluginsdk.zip sdk
+          $plugins = Get-ChildItem -Recurse sdk -Filter _plugins.h | Select-Object -First 1
+          "SDK=$($plugins.DirectoryName)" | Out-File -Append $env:GITHUB_ENV
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DX64DBG_SDK="${{ env.SDK }}"
+          cmake --build build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pybridge-${{ matrix.arch }}
+          path: build/pybridge.dp*

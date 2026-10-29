@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pybridge — drive x64dbg from Python</title>
+<meta name="description" content="pybridge: an x64dbg plugin and a standard-library Python client to drive x64dbg (GUI or headless.exe) — breakpoints, stepping, registers, memory, API hooks, traces, headless templates.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f46e5'/%3E%3Cpath d='M8 20c3-8 13-8 16 0' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Cpath d='M6 20h20' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='11' r='2.4' fill='white'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f9fb; --surface: #ffffff; --text: #14202b; --muted: #55657a;
+  --border: #dde4ec; --accent: #4f46e5; --accent-soft: #e8e7fd;
+  --code-bg: #0f1720; --code-text: #d7e3ee; --code-dim: #7d90a3; --code-hi: #c4b5fd;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1117; --surface: #121b24; --text: #e4ecf3; --muted: #93a4b6;
+    --border: #233140; --accent: #a5b4fc; --accent-soft: #1c1d3d;
+    --code-bg: #070c11; --code-text: #d7e3ee; --code-dim: #6d8094; --code-hi: #c4b5fd;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1117; --surface: #121b24; --text: #e4ecf3; --muted: #93a4b6;
+  --border: #233140; --accent: #a5b4fc; --accent-soft: #1c1d3d;
+  --code-bg: #070c11; --code-text: #d7e3ee; --code-dim: #6d8094; --code-hi: #c4b5fd;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.9em; font-variant-ligatures: none; }
+:not(pre) > code { background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); text-decoration: none; }
+nav { display: flex; gap: 18px; flex-wrap: wrap; }
+nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+nav a:hover { color: var(--accent); }
+.hero { padding-top: 56px; padding-bottom: 32px; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.15; margin: 0 0 14px; letter-spacing: -0.02em; }
+.hero p.lead { font-size: 1.15rem; color: var(--muted); max-width: 680px; margin: 0 0 24px; }
+.buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn { display: inline-block; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600; border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] .btn.primary { color: #06121c; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #06121c; } }
+pre.term { background: var(--code-bg); color: var(--code-text); border-radius: 10px; padding: 18px 20px; overflow-x: auto; margin: 28px 0 0; line-height: 1.5; }
+.term .p { color: var(--code-hi); }
+.term .d { color: var(--code-dim); }
+section { padding: 36px 0; border-top: 1px solid var(--border); }
+section h2 { font-size: 1.5rem; margin: 0 0 8px; letter-spacing: -0.01em; }
+section > .wrap > p.sub { color: var(--muted); margin: 0 0 24px; max-width: 720px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+pre.block { background: var(--code-bg); color: var(--code-text); border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 0 0 16px; }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0 0 20px; }
+.steps li { counter-increment: s; position: relative; padding-left: 40px; margin-bottom: 12px; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 700; display: grid; place-items: center; font-size: 0.9rem; }
+.note { border-left: 3px solid var(--accent); background: var(--surface); padding: 12px 16px; border-radius: 0 8px 8px 0; color: var(--muted); }
+footer { border-top: 1px solid var(--border); padding: 28px 0 40px; color: var(--muted); font-size: 0.9rem; }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+@media (max-width: 640px) { nav { display: none; } .hero { padding-top: 36px; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#4f46e5"/><path d="M8 20c3-8 13-8 16 0" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M6 20h20" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="11" r="2.4" fill="#fff"/></svg>
+      pybridge
+    </a>
+    <nav>
+      <a href="#start">Quick start</a>
+      <a href="#api">API</a>
+      <a href="#templates">Headless templates</a>
+      <a href="https://github.com/EGKrb/pybridge">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <h1>Drive x64dbg<br>from Python.</h1>
+    <p class="lead">pybridge is an x64dbg plugin and a standard-library Python client: breakpoints, single-stepping, registers, memory, API hooks and traces — in the GUI or in <code>headless.exe</code>, with nothing to <code>pip install</code>.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/EGKrb/pybridge/releases/latest">Download</a>
+      <a class="btn" href="https://github.com/EGKrb/pybridge">View on GitHub</a>
+      <a class="btn" href="https://github.com/EGKrb/pybridge/blob/main/README.fr.md">Français</a>
+    </div>
+<pre class="term"><span class="p">from</span> x64dbg_bridge <span class="p">import</span> Debugger
+
+<span class="p">with</span> Debugger.launch(r<span class="d">"C:\Tools\x64dbg\release"</span>) <span class="p">as</span> dbg:   <span class="d"># starts headless.exe</span>
+    dbg.init(r<span class="d">"C:\Windows\System32\whoami.exe"</span>)
+    dbg.set_breakpoint(<span class="d">"kernelbase.LoadLibraryExW"</span>, break_=<span class="p">False</span>,
+                       log=<span class="d">"LoadLibrary({utf16@arg.get(0)})"</span>)
+    dbg.set_breakpoint(<span class="d">"kernelbase.CreateFileW"</span>)
+    <span class="p">if</span> dbg.run(wait=<span class="p">True</span>, timeout=10):
+        print(dbg.read_string(dbg.eval(<span class="d">"arg.get(0)"</span>), wide=<span class="p">True</span>))
+        print(dbg.regs())</pre>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <h2>What's inside</h2>
+      <p class="sub">Works with official x64dbg, on x64 and x32 targets.</p>
+      <div class="grid">
+        <div class="card"><h3>Plugin</h3><p><code>pybridge.dp64</code> / <code>.dp32</code>: a local TCP server speaking one JSON request per line. Usable from any language.</p></div>
+        <div class="card"><h3>Python client</h3><p><code>x64dbg_bridge.Debugger</code>: launch or attach, step, read and write memory, hook APIs — standard library only.</p></div>
+        <div class="card"><h3>Headless templates</h3><p>Twelve ready-made x64dbg scripts (API log, unpack dumps, pattern search, traces) run by one PowerShell launcher.</p></div>
+        <div class="card"><h3>Dump emulation</h3><p><code>emulate_dump.py</code> runs a <code>.dmp</code> in Unicorn and serves it over the same protocol, so the client drives it like a live process.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap">
+      <h2>Quick start</h2>
+      <p class="sub">Windows, x64dbg, Python 3.10 or newer.</p>
+      <ol class="steps">
+        <li>Download <a href="https://github.com/EGKrb/pybridge/releases/latest"><code>pybridge_1.0.0.zip</code></a>.</li>
+        <li>Extract it into x64dbg's <code>release</code> folder (it adds <code>x64\plugins\pybridge.dp64</code>, <code>x32\plugins\pybridge.dp32</code> and <code>pybridge\</code>).</li>
+        <li>Point Python at the client and launch:</li>
+      </ol>
+<pre class="block">import sys
+sys.path.insert(0, r"C:\Tools\x64dbg\release\pybridge\python")
+from x64dbg_bridge import Debugger
+
+with Debugger.launch(r"C:\Tools\x64dbg\release", arch="x64") as dbg:
+    dbg.init(r"C:\Windows\System32\notepad.exe")
+    print(dbg.regs())</pre>
+      <p class="note">Already in x64dbg? Run <code>pybridge.start</code> in the command bar (port 27041), then <code>Debugger()</code> connects to it.</p>
+    </div>
+  </section>
+
+  <section id="api">
+    <div class="wrap">
+      <h2>API at a glance</h2>
+      <p class="sub">Addresses accept integers or x64dbg expressions: <code>"kernelbase.CreateFileW"</code>, <code>"rsp+8"</code>, <code>"[rsp]"</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Methods</th></tr></thead>
+          <tbody>
+            <tr><td>Session</td><td><code>launch()</code>, <code>init()</code>, <code>attach()</code>, <code>stop()</code>, <code>close()</code></td></tr>
+            <tr><td>Execution</td><td><code>run()</code>, <code>pause()</code>, <code>step_into()</code>, <code>step_over()</code>, <code>step_out()</code>, <code>wait()</code>, <code>state()</code></td></tr>
+            <tr><td>Registers</td><td><code>regs()</code>, <code>reg()</code>, <code>set_reg()</code></td></tr>
+            <tr><td>Memory</td><td><code>read()</code>, <code>write()</code>, <code>read_ptr()</code>, <code>read_string()</code>, <code>is_valid()</code>, <code>disasm()</code></td></tr>
+            <tr><td>Breakpoints</td><td><code>set_breakpoint()</code>, <code>delete_breakpoint()</code>, <code>set_hardware_breakpoint()</code></td></tr>
+            <tr><td>API hooks</td><td><code>hook_api()</code>, <code>dump_memory()</code></td></tr>
+            <tr><td>Anti-anti-debug</td><td><code>hide_debugger()</code>, <code>scyllahide_profiles()</code>, <code>scyllahide_set_profile()</code></td></tr>
+            <tr><td>Traces</td><td><code>trace()</code>, <code>export_trace()</code> (JSON / CSV / Tenet / Frinet, with <a href="https://github.com/EGKrb/Fathom">Fathom</a>)</td></tr>
+            <tr><td>Commands</td><td><code>cmd()</code>, <code>command()</code>, <code>eval()</code>, <code>result</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="templates">
+    <div class="wrap">
+      <h2>Headless templates</h2>
+      <p class="sub">The launcher fills in the target, runs <code>headless.exe</code> with an isolated configuration and collects everything in <code>out\&lt;template&gt;-&lt;date&gt;\</code>.</p>
+<pre class="block">.\headless\run-headless.ps1 -Template api-log -Target C:\Windows\System32\whoami.exe -X64dbgDir C:\Tools\x64dbg\release
+.\headless\run-headless.ps1 -Template unpack-dump -Target .\sample.exe -X64dbgDir C:\Tools\x64dbg\release -Arch x32</pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Template</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>api-log</code>, <code>hook-apis-extended</code></td><td>log API calls with their arguments, without pausing</td></tr>
+            <tr><td><code>hook-unpack</code>, <code>unpack-dump</code></td><td>follow runtime unpacking and dump the region flipped to executable</td></tr>
+            <tr><td><code>dump-module</code>, <code>dump-at-delay</code></td><td>save the main module and a full minidump</td></tr>
+            <tr><td><code>break-on-file</code></td><td>conditional breakpoint followed by automatic actions</td></tr>
+            <tr><td><code>antidebug</code></td><td>hide the debugger and log anti-debug probes</td></tr>
+            <tr><td><code>find-pattern</code></td><td>search a hex or ASCII pattern over the whole memory map</td></tr>
+            <tr><td><code>trace-export</code>, <code>run-trace</code></td><td>record a trace and export it (needs Fathom's <code>TraceExport</code>)</td></tr>
+            <tr><td><code>emulate-dump</code></td><td>serve a <code>.dmp</code> emulation on 127.0.0.1:27041</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Security</h2>
+      <p class="sub">The server only accepts local connections, but any local program that connects to it fully controls the debugger. Start it only when you need it, and use it on binaries you are allowed to study.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>pybridge · GPL-3.0-or-later · bundled with <a href="https://github.com/EGKrb/Fathom">Fathom</a></span>
+    <span>A plugin for <a href="https://github.com/x64dbg/x64dbg">x64dbg</a> · see also <a href="https://github.com/EGKrb/wineye">wineye</a></span>
+  </div>
+</footer>
+</body>
+</html>
