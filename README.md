@@ -68,7 +68,7 @@ Addresses and values accept an integer or an **x64dbg expression**: `"kernelbase
 | Traces | `trace(record_file, condition, max_steps, step_over)`, `export_trace(trace, output, fmt, slide)` |
 | Commands | `cmd("raw text")`, `command(name, *args)` (automatic escaping), `eval(expr)`, `result` (`$result`) |
 
-pybridge works with **official x64dbg**. One exception: `export_trace()` uses the `TraceExport` command (trace → JSON, CSV, Tenet or Frinet), which exists only in [Fathom](https://github.com/EGKrb/Fathom), the x64dbg-based toolkit pybridge ships with.
+pybridge works with **official x64dbg**. One exception: `export_trace()` uses the `TraceExport` command (trace → JSON, CSV, Tenet, Frinet or the `.ftt` time travel format), which exists only in [Fathom](https://github.com/EGKrb/Fathom), the x64dbg-based toolkit pybridge ships with.
 
 ## Examples
 
