@@ -68,7 +68,7 @@ Les adresses et valeurs acceptent un entier ou une **expression x64dbg** : `"ker
 | Traces | `trace(record_file, condition, max_steps, step_over)`, `export_trace(trace, output, fmt, slide)` |
 | Commandes | `cmd("texte brut")`, `command(name, *args)` (échappement automatique), `eval(expr)`, `result` (`$result`) |
 
-pybridge fonctionne avec **x64dbg officiel**. Une exception : `export_trace()` utilise la commande `TraceExport` (trace → JSON, CSV, Tenet, Frinet ou le format time travel `.ftt`), qui n'existe que dans [Fathom](https://github.com/EGKrb/Fathom), la boîte à outils basée sur x64dbg avec laquelle pybridge est livré.
+pybridge fonctionne avec **x64dbg officiel**. Une exception : `export_trace()` utilise la commande `TraceExport` (trace → JSON, CSV, Tenet, Frinet ou le format time travel `.ftt`), qui n'existe que dans [Fathom](https://github.com/EGKrb/Fathom), la boîte à outils basée sur x64dbg avec laquelle pybridge est livré. Après `export_trace()`, `eval("$result1")` / `eval("$result2")` donnent les intervalles échantillonnés de la trace et ceux dont l'ordre des threads est approximatif (un autre thread a exécuté du code hors de la trace).
 
 ## Exemples
 
