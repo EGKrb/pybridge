@@ -66,6 +66,7 @@ Les adresses et valeurs acceptent un entier ou une **expression x64dbg** : `"ker
 | Hook d'API | `hook_api(api, log, condition, command, break_)` (log sans pause par défaut), `dump_memory(addr, size, path)` |
 | Anti-anti-debug | `hide_debugger()` (commande `hide` d'x64dbg : patche le PEB du processus débogué), `scyllahide_profiles(ini)`, `scyllahide_set_profile(ini, name)` |
 | Traces | `trace(record_file, condition, max_steps, step_over)`, `export_trace(trace, output, fmt, slide)` |
+| Émulation (Fathom) | `emulate_call(address, *args, trace)`, `emulate_run(end, count, trace)`, `emulator(dump, **options)`, `minidump(path)` |
 | Commandes | `cmd("texte brut")`, `command(name, *args)` (échappement automatique), `eval(expr)`, `result` (`$result`) |
 
 pybridge fonctionne avec **x64dbg officiel**. Une exception : `export_trace()` utilise la commande `TraceExport` (trace → JSON, CSV, Tenet, Frinet ou le format time travel `.ftt`), qui n'existe que dans [Fathom](https://github.com/EGKrb/Fathom), la boîte à outils basée sur x64dbg avec laquelle pybridge est livré. Après `export_trace()`, `eval("$result1")` / `eval("$result2")` donnent les intervalles échantillonnés de la trace et ceux dont l'ordre des threads est approximatif (un autre thread a exécuté du code hors de la trace).
@@ -86,6 +87,22 @@ Dans [`examples/`](examples) (option `--x64dbg <dossier release>` ou variable `X
 | `unpack_dump.py cible.exe --out-dir dumps` | dump de chaque région que `VirtualProtect` passe en PAGE_EXECUTE* (noms horodatés + adresse + taille + flag) |
 | `xor_decrypt.py cible.exe --addr ... --size ... --key ... [--brute]` | lit une zone chiffrée depuis le processus et la déchiffre en XOR (clé connue ou force brute sur 1 octet) |
 | `emulate_dump.py crash.dmp --count 200` | **émule** un dump mémoire (pas à pas, trace JSON/CSV, serveur pybridge) — voir ci-dessous |
+
+## Émuler le débogué (avec Fathom)
+
+Avec [Fathom](https://github.com/EGKrb/Fathom), l'état courant du débogué peut tourner dans **l'émulateur de Fathom** (dumpulator, avec les appels système de Windows, les threads, les processus enfants, les fenêtres et les API 3D écrits en Python) pendant que le débogué lui-même ne bouge pas :
+
+```python
+with Debugger.launch(r"C:\Fathom\release") as dbg:
+    dbg.init(r"C:\cible.exe")
+    longueur = dbg.emulate_call("kernel32.lstrlenW", "wstr:salut")  # 5 : la fonction a tourné dans l'émulateur
+    arret = dbg.emulate_run(count=100000, trace=True)                # le thread continue ; la trace s'ouvre dans Time Travel
+    dp = dbg.emulator()                                             # un dumpulator.Dumpulator de l'état courant
+    print(hex(dp.call(dp.modules["kernel32.dll"].find_export("GetTickCount").address)))
+```
+
+- `emulate_call()` et `emulate_run()` utilisent les commandes `emu.call` / `emu.run` d'ExtraCmds ; `emulator()` sauvegarde le débogué dans un minidump (`minidump()`) et le charge dans ce processus Python (`pip install -r emulator\requirements.txt`). L'émulateur est cherché dans le dossier `emulator` d'une release de Fathom (ou `FATHOM_EMULATOR`).
+- x64dbg officiel n'a ni les commandes ni l'émulateur : ces méthodes demandent Fathom.
 
 ## Émuler un dump (.dmp)
 
